@@ -1,3 +1,12 @@
+---
+title: P5 ML API Futurisys
+emoji: 🚀
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+app_port: 7860
+---
+
 # P5 - Déployez un modèle de Machine Learning
 
 ## Contexte du projet
