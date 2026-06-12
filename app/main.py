@@ -8,7 +8,7 @@ from app.services.prediction_log_service import save_prediction_request, save_pr
 app = FastAPI(
     title="P5 - API de déploiement ML",
     description="API FastAPI pour exposer un modèle de machine learning de prédiction d'attrition.",
-    version="0.3.0",
+    version="0.5.0",
 )
 
 
@@ -22,7 +22,7 @@ def health_check():
     return {
         "status": "ok",
         "service": "p5-ml-api",
-        "version": "0.3.0",
+        "version": "0.5.0",
     }
 
 

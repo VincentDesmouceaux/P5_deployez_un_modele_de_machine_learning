@@ -39,3 +39,7 @@ htmlcov/
 *.csv
 *.xlsx
 *.parquet
+
+# Keep exported ML model artifacts
+!models/*.joblib
+!models/*.json
