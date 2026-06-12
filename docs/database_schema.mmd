@@ -1,41 +1,41 @@
 erDiagram
-EMPLOYEES_DATASET ||--o{ PREDICTION_REQUESTS : "employee_id"
-PREDICTION_REQUESTS ||--|| PREDICTION_RESPONSES : "request_id"
+EMPLOYEES_DATASET ||--o{ PREDICTION_REQUESTS : employee_id
+PREDICTION_REQUESTS ||--|| PREDICTION_RESPONSES : request_id
 
-```
+
 EMPLOYEES_DATASET {
-    int id_employee PK "Identifiant collaborateur"
-    int age "Age du collaborateur"
-    string genre "Genre"
-    numeric revenu_mensuel "Revenu mensuel"
-    string statut_marital "Statut marital"
-    string departement "Département"
-    string poste "Poste occupé"
-    int nombre_heures_travailless "Heures travaillées"
-    int annees_dans_l_entreprise "Ancienneté entreprise"
-    int satisfaction_employee_environnement "Satisfaction environnement"
-    int note_evaluation_actuelle "Evaluation actuelle"
-    string heure_supplementaires "Heures supplémentaires"
-    int attrition_bin "Cible ML : 0 reste, 1 départ"
+    int id_employee PK
+    int age
+    string genre
+    numeric revenu_mensuel
+    string statut_marital
+    string departement
+    string poste
+    int nombre_heures_travailless
+    int annees_dans_l_entreprise
+    int satisfaction_employee_environnement
+    int note_evaluation_actuelle
+    string heure_supplementaires
+    int attrition_bin
 }
 
 PREDICTION_REQUESTS {
-    bigint request_id PK "Identifiant de la requête"
-    timestamp created_at "Date de création"
-    string source "Source de la requête"
-    int employee_id FK "Référence éventuelle au collaborateur"
-    jsonb input_payload "Input complet envoyé au modèle"
+    bigint request_id PK
+    timestamp created_at
+    string source
+    int employee_id FK
+    jsonb input_payload
 }
 
 PREDICTION_RESPONSES {
-    bigint response_id PK "Identifiant de la réponse"
-    bigint request_id FK "Référence à la requête"
-    timestamp created_at "Date de création"
-    int prediction "Classe prédite : 0 ou 1"
-    string prediction_label "Libellé : stay ou leave"
-    numeric probability_leave "Probabilité de départ"
-    string model_name "Nom du modèle"
-    string model_version "Version du modèle"
-    jsonb output_payload "Output complet généré par le modèle"
+    bigint response_id PK
+    bigint request_id FK
+    timestamp created_at
+    int prediction
+    string prediction_label
+    numeric probability_leave
+    string model_name
+    string model_version
+    jsonb output_payload
 }
-```
+
