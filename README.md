@@ -84,3 +84,21 @@ git tag -a v0.1.0 -m "Initialisation du projet"
 ## État du projet
 
 Projet en cours de développement.
+
+## API de prédiction
+
+L'API expose plusieurs endpoints :
+
+- GET /health : vérification de disponibilité de l'API ;
+- GET /model-info : informations sur le modèle exposé ;
+- POST /predict : prédiction d'attrition à partir des caractéristiques d'un collaborateur.
+
+La validation des données entrantes est assurée avec Pydantic.
+
+La documentation interactive est disponible via :
+
+/docs
+
+La documentation technique des endpoints est disponible dans :
+
+docs/api.md

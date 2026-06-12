@@ -11,3 +11,4 @@ def test_health_check_returns_ok():
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
     assert response.json()["service"] == "p5-ml-api"
+    assert response.json()["version"] == "0.3.0"
