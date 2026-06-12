@@ -8,19 +8,35 @@ SELECT 'prediction_responses' AS table_name, COUNT(*) AS total_rows
 FROM ml_api.prediction_responses;
 
 SELECT
-    left_company,
+    attrition_bin,
     COUNT(*) AS total
 FROM ml_api.employees_dataset
-GROUP BY left_company
-ORDER BY left_company;
+GROUP BY attrition_bin
+ORDER BY attrition_bin;
 
 SELECT
-    department,
+    a_quitte_l_entreprise,
+    attrition_bin,
     COUNT(*) AS total
 FROM ml_api.employees_dataset
-GROUP BY department
+GROUP BY a_quitte_l_entreprise, attrition_bin
+ORDER BY attrition_bin, a_quitte_l_entreprise;
+
+SELECT
+    departement,
+    COUNT(*) AS total
+FROM ml_api.employees_dataset
+GROUP BY departement
 ORDER BY total DESC;
 
-SELECT *
+SELECT
+    id_employee,
+    age,
+    genre,
+    departement,
+    poste,
+    a_quitte_l_entreprise,
+    attrition_bin
 FROM ml_api.employees_dataset
-LIMIT 5;
+ORDER BY id_employee
+LIMIT 10;

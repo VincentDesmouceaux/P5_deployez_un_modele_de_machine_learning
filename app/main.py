@@ -3,6 +3,7 @@ from fastapi.responses import RedirectResponse
 
 from app.schemas import ModelInfo, PredictionInput, PredictionOutput
 from app.services.model_service import get_model_info, predict_attrition
+from app.services.prediction_log_service import save_prediction_request, save_prediction_response
 
 app = FastAPI(
     title="P5 - API de déploiement ML",
@@ -32,4 +33,8 @@ def model_info():
 
 @app.post("/predict", response_model=PredictionOutput, tags=["Prediction"])
 def predict(input_data: PredictionInput):
-    return predict_attrition(input_data)
+    request_id = save_prediction_request(input_data)
+    prediction_output = predict_attrition(input_data)
+    save_prediction_response(request_id, prediction_output)
+
+    return prediction_output

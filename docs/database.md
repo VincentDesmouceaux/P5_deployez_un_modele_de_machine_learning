@@ -198,3 +198,67 @@ Points de vigilance :
 - des tables dédiées à la traçabilité des inputs et outputs ;
 - une documentation claire de l'architecture base de données ;
 - une base prête à être connectée à l'API FastAPI.
+
+## Schéma relationnel
+
+Le schéma relationnel de la base est disponible dans le fichier suivant :
+
+docs/database_schema.mmd
+
+Ce schéma montre les trois tables principales :
+
+- employees_dataset : stockage du dataset complet ;
+- prediction_requests : stockage des inputs envoyés au modèle ;
+- prediction_responses : stockage des outputs générés par le modèle.
+
+La table prediction_requests est reliée au dataset via employee_id lorsque l'input correspond à un collaborateur existant.
+
+La table prediction_responses est reliée à prediction_requests via request_id.
+
+Cette structure garantit la traçabilité complète entre une requête API, les données envoyées au modèle et la prédiction retournée.
+
+## Connexion Python avec SQLAlchemy
+
+L'application utilise SQLAlchemy pour se connecter à PostgreSQL.
+
+La connexion est centralisée dans :
+
+app/database.py
+
+L'enregistrement des inputs et outputs est centralisé dans :
+
+app/services/prediction_log_service.py
+
+Le endpoint POST /predict suit maintenant ce flux :
+
+1. réception de l'input API ;
+2. enregistrement de l'input dans prediction_requests ;
+3. appel du modèle de machine learning ;
+4. enregistrement de l'output dans prediction_responses ;
+5. retour de la prédiction à l'utilisateur.
+
+Ainsi, toutes les interactions avec le modèle passent bien par la base de données.
+
+## Variables d'environnement
+
+Le fichier .env contient la connexion locale à PostgreSQL.
+
+Il n'est pas versionné afin d'éviter de publier des informations sensibles.
+
+Un fichier .env.example est fourni pour documenter la variable attendue :
+
+DATABASE_URL=postgresql://localhost:5432/p5_ml_api
+
+## Script de traçabilité
+
+Le fichier suivant permet de vérifier les dernières prédictions enregistrées :
+
+db/sql/05_trace_predictions.sql
+
+Il joint les tables prediction_requests et prediction_responses afin de retrouver, pour chaque prédiction :
+
+- l'input envoyé ;
+- l'output retourné ;
+- la date de création ;
+- le modèle utilisé ;
+- la version du modèle.
