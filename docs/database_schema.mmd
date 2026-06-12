@@ -1,14 +1,13 @@
 erDiagram
-    EMPLOYEES_DATASET ||--o{ PREDICTION_REQUESTS : "employee_id"
-    PREDICTION_REQUESTS ||--|| PREDICTION_RESPONSES : "request_id"
 
     EMPLOYEES_DATASET {
         int id_employee PK
         int age
         string genre
+        numeric revenu_mensuel
+        string statut_marital
         string departement
         string poste
-        string a_quitte_l_entreprise
         int attrition_bin
     }
 
@@ -31,3 +30,6 @@ erDiagram
         string model_version
         jsonb output_payload
     }
+
+    EMPLOYEES_DATASET ||--o{ PREDICTION_REQUESTS : "employee_id"
+    PREDICTION_REQUESTS ||--|| PREDICTION_RESPONSES : "request_id"
