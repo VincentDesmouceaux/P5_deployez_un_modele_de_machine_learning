@@ -1,3 +1,13 @@
+---
+title: P5 ML API Futurisys
+emoji: 🚀
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 ## 🏗️ Architecture API, modèle ML et base de données
 
 Ce projet expose un modèle de machine learning de prédiction d’attrition via une API **FastAPI**.
