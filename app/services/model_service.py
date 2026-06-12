@@ -1,71 +1,57 @@
+import json
+from functools import lru_cache
+from pathlib import Path
+
+import joblib
+import pandas as pd
+
 from app.schemas import ModelInfo, PredictionInput, PredictionOutput
 
-MODEL_NAME = "attrition-baseline-api"
-MODEL_VERSION = "0.3.0"
-MODEL_TYPE = "rule-based-baseline"
-TARGET = "employee_attrition"
+BASE_DIR = Path(__file__).resolve().parents[2]
+MODEL_PATH = BASE_DIR / "models" / "attrition_random_forest.joblib"
+METADATA_PATH = BASE_DIR / "models" / "model_metadata.json"
+
+
+@lru_cache(maxsize=1)
+def load_model():
+    return joblib.load(MODEL_PATH)
+
+
+@lru_cache(maxsize=1)
+def load_metadata() -> dict:
+    return json.loads(METADATA_PATH.read_text())
 
 
 def get_model_info() -> ModelInfo:
+    metadata = load_metadata()
+
     return ModelInfo(
-        model_name=MODEL_NAME,
-        model_version=MODEL_VERSION,
-        model_type=MODEL_TYPE,
-        target=TARGET,
-        description=(
-            "Modèle de référence provisoire pour exposer l'API de prédiction. "
-            "Il sera remplacé par le modèle machine learning exporté du projet P4."
-        ),
-        input_features=[
-            "satisfaction_level",
-            "last_evaluation",
-            "number_project",
-            "average_monthly_hours",
-            "time_spend_company",
-            "work_accident",
-            "promotion_last_5years",
-            "department",
-            "salary",
-        ],
+        model_name=metadata["model_name"],
+        model_version=metadata["model_version"],
+        model_type=metadata["model_type"],
+        target=metadata["target"],
+        description=metadata.get("description", "Modèle Random Forest de prédiction d attrition."),
+        input_features=metadata["features"],
     )
 
 
 def predict_attrition(input_data: PredictionInput) -> PredictionOutput:
-    score = 0.15
+    model = load_model()
+    metadata = load_metadata()
 
-    score += (1 - input_data.satisfaction_level) * 0.35
+    input_payload = input_data.model_dump()
+    features = metadata["features"]
 
-    if input_data.average_monthly_hours > 180:
-        score += min((input_data.average_monthly_hours - 180) / 170, 1) * 0.20
+    input_dataframe = pd.DataFrame([input_payload], columns=features)
 
-    if input_data.number_project > 4:
-        score += min((input_data.number_project - 4) / 6, 1) * 0.10
-
-    if input_data.last_evaluation > 0.75 and input_data.satisfaction_level < 0.50:
-        score += 0.10
-
-    if input_data.time_spend_company >= 4:
-        score += 0.05
-
-    if input_data.salary == "low":
-        score += 0.10
-    elif input_data.salary == "high":
-        score -= 0.05
-
-    if input_data.promotion_last_5years:
-        score -= 0.10
-
-    if input_data.work_accident:
-        score -= 0.05
-
-    probability_leave = round(max(0.01, min(score, 0.99)), 4)
-    prediction = 1 if probability_leave >= 0.50 else 0
+    probability_leave = float(model.predict_proba(input_dataframe)[0][1])
+    prediction = int(probability_leave >= 0.5)
     prediction_label = "leave" if prediction == 1 else "stay"
 
     return PredictionOutput(
         prediction=prediction,
         prediction_label=prediction_label,
-        probability_leave=probability_leave,
-        model_name=MODEL_NAME,
-        model_version=MODEL_VERSION,
+        probability_leave=round(probability_leave, 4),
+        model_name=metadata["model_name"],
+        model_version=metadata["model_version"],
     )
