@@ -8,6 +8,9 @@ app_port: 7860
 pinned: false
 ---
 
+
+# 🚀 P5 — Déployez un modèle de Machine Learning
+
 ## 🏗️ Architecture API, modèle ML et base de données
 
 Ce projet expose un modèle de machine learning de prédiction d’attrition via une API **FastAPI**.
@@ -17,7 +20,15 @@ L’objectif est de proposer une architecture complète permettant :
 * d’exposer un modèle de prédiction via une API REST ;
 * de charger un modèle ML exporté au format `joblib` ;
 * de stocker le dataset complet dans une base PostgreSQL locale ;
-* de tracer systématiquement les inputs et outputs de chaque prédiction.
+* de tracer systématiquement les inputs et outputs de chaque prédiction ;
+* de tester l’API, les schémas Pydantic, le service modèle et la logique de traçabilité ;
+* de générer un rapport de couverture de tests.
+
+Le flux global du projet est le suivant :
+
+```text
+Utilisateur → API FastAPI → Modèle ML → PostgreSQL → Réponse API
+```
 
 ---
 
@@ -29,9 +40,11 @@ Il permet de prédire si un collaborateur est susceptible de quitter l’entrepr
 
 ### Fichiers associés
 
-* `scripts/train_export_model.py` : script d’entraînement et d’export du modèle ;
-* `models/attrition_random_forest.joblib` : pipeline complet exporté ;
-* `models/model_metadata.json` : métadonnées du modèle.
+| Fichier                                 | Rôle                                        |
+| --------------------------------------- | ------------------------------------------- |
+| `scripts/train_export_model.py`         | Script d’entraînement et d’export du modèle |
+| `models/attrition_random_forest.joblib` | Pipeline complet exporté                    |
+| `models/model_metadata.json`            | Métadonnées du modèle                       |
 
 ### Métriques obtenues sur le jeu de test
 
@@ -43,6 +56,8 @@ Il permet de prédire si un collaborateur est susceptible de quitter l’entrepr
 | F1-score  | 0.4286 |
 | ROC AUC   | 0.7975 |
 
+Ces métriques permettent de contrôler la qualité globale du modèle, tout en gardant une trace de ses limites, notamment sur la classe minoritaire liée à l’attrition.
+
 ---
 
 ## ⚡ API FastAPI
@@ -51,6 +66,7 @@ L’API expose les endpoints suivants :
 
 | Endpoint      | Méthode | Description                                                                |
 | ------------- | ------- | -------------------------------------------------------------------------- |
+| `/`           | GET     | Redirige vers la documentation Swagger                                     |
 | `/health`     | GET     | Vérifie que l’API fonctionne                                               |
 | `/model-info` | GET     | Retourne les informations du modèle chargé                                 |
 | `/predict`    | POST    | Envoie les données d’un collaborateur au modèle et retourne une prédiction |
@@ -67,6 +83,25 @@ http://127.0.0.1:8000/docs
 python -m uvicorn app.main:app --reload
 ```
 
+### Exemple de sortie `/predict`
+
+```json
+{
+  "prediction": 1,
+  "prediction_label": "leave",
+  "probability_leave": 0.8955,
+  "model_name": "attrition-random-forest",
+  "model_version": "0.5.0"
+}
+```
+
+La règle métier utilisée est :
+
+```text
+probability_leave >= 0.5 → leave
+probability_leave < 0.5  → stay
+```
+
 ---
 
 ## 🐘 Base de données PostgreSQL
@@ -79,36 +114,58 @@ Le schéma utilisé est :
 ml_api
 ```
 
-### Scripts SQL
-
-| Script                            | Rôle                                           |
-| --------------------------------- | ---------------------------------------------- |
-| `db/sql/01_create_database.sql`   | Création de la base PostgreSQL                 |
-| `db/sql/02_create_tables.sql`     | Création du schéma et des tables               |
-| `db/sql/03_load_dataset.sql`      | Insertion du dataset complet                   |
-| `db/sql/04_check_database.sql`    | Vérification du contenu de la base             |
-| `db/sql/05_trace_predictions.sql` | Vérification de la traçabilité des prédictions |
-
-### Schéma de la base
-
-* `docs/database_schema.mmd`
-
-### Documentation détaillée
-
-* `docs/database.md`
-* `docs/model_loading.md`
-
----
-
-## 🗂️ Tables principales
-
-La base contient trois tables principales.
+### Tables principales
 
 | Table                         | Description                                    |
 | ----------------------------- | ---------------------------------------------- |
 | `ml_api.employees_dataset`    | Contient le dataset complet des collaborateurs |
 | `ml_api.prediction_requests`  | Stocke les inputs envoyés au modèle            |
 | `ml_api.prediction_responses` | Stocke les outputs générés par le modèle       |
+| `ml_api.v_prediction_traces`  | Vue SQL reliant les inputs et les outputs      |
+
+---
+
+## 🧾 Scripts SQL
+
+| Script                                      | Rôle                                                         |
+| ------------------------------------------- | ------------------------------------------------------------ |
+| `db/sql/01_create_database.sql`             | Création de la base PostgreSQL `p5_ml_api`                   |
+| `db/sql/02_create_tables.sql`               | Création du schéma `ml_api` et des tables                    |
+| `db/sql/03_load_dataset.sql`                | Insertion du dataset complet                                 |
+| `db/sql/04_check_database.sql`              | Vérification du contenu de la base                           |
+| `db/sql/05_trace_predictions.sql`           | Vérification détaillée de la traçabilité des prédictions     |
+| `db/sql/06_create_trace_view.sql`           | Création de la vue `ml_api.v_prediction_traces`              |
+| `db/sql/07_visualize_prediction_traces.sql` | Visualisation lisible de toutes les prédictions enregistrées |
+
+### Reconstruction de la base
+
+```bash
+psql postgres -f db/sql/01_create_database.sql
+psql p5_ml_api -f db/sql/02_create_tables.sql
+psql p5_ml_api -f db/sql/03_load_dataset.sql
+psql p5_ml_api -f db/sql/06_create_trace_view.sql
+```
+
+### Vérifier le contenu de la base
+
+```bash
+psql p5_ml_api -f db/sql/04_check_database.sql
+```
+
+### Vérifier les traces complètes
+
+```bash
+psql p5_ml_api -f db/sql/05_trace_predictions.sql
+```
+
+### Visualiser toutes les prédictions
+
+```bash
+psql p5_ml_api -f db/sql/07_visualize_prediction_traces.sql
+```
+
+Le script `07_visualize_prediction_traces.sql` **n’utilise pas de `LIMIT`**.
+Il affiche donc toutes les traces disponibles dans la base.
 
 ---
 
@@ -116,10 +173,19 @@ La base contient trois tables principales.
 
 Chaque appel à `POST /predict` suit le flux suivant :
 
-1. l’input envoyé à l’API est enregistré dans `prediction_requests` ;
-2. le modèle de machine learning est appelé ;
-3. l’output du modèle est enregistré dans `prediction_responses` ;
-4. la réponse est retournée à l’utilisateur.
+```text
+1. L'utilisateur appelle POST /predict
+              ↓
+2. L'input JSON est enregistré dans prediction_requests
+              ↓
+3. Le modèle ML génère une prédiction
+              ↓
+4. L'output JSON est enregistré dans prediction_responses
+              ↓
+5. La réponse est retournée par l'API
+              ↓
+6. La vue v_prediction_traces permet de contrôler la trace complète
+```
 
 Cette logique garantit une traçabilité complète entre :
 
@@ -133,7 +199,7 @@ API FastAPI → PostgreSQL → Modèle ML → PostgreSQL → Réponse API
 psql p5_ml_api -f db/sql/05_trace_predictions.sql
 ```
 
-Exemple de résultat obtenu :
+Exemple de résultat :
 
 ```text
 request_id | prediction | prediction_label | probability_leave | model_name              | model_version
@@ -141,6 +207,9 @@ request_id | prediction | prediction_label | probability_leave | model_name     
 3          | 1          | leave            | 0.89550           | attrition-random-forest | 0.5.0
 2          | 0          | stay             | 0.40030           | attrition-random-forest | 0.5.0
 ```
+
+---
+
 ## 🖥️ Visualisation PostgreSQL avec DBeaver
 
 Pour faciliter la compréhension du cheminement des données, la base PostgreSQL locale peut être explorée avec **DBeaver Community**.
@@ -151,18 +220,7 @@ L’objectif est de montrer visuellement le flux complet :
 API FastAPI → PostgreSQL → Modèle ML → PostgreSQL → Réponse API
 ```
 
-Cette visualisation permet de vérifier que chaque prédiction possède :
-
-* un `request_id` côté input ;
-* un `response_id` côté output ;
-* une prédiction ;
-* une probabilité de départ ;
-* un nom de modèle ;
-* une version de modèle.
-
----
-
-### 🔌 Connexion DBeaver
+### Connexion DBeaver
 
 Paramètres de connexion utilisés en local :
 
@@ -188,40 +246,25 @@ p5_ml_api
             └── v_prediction_traces
 ```
 
----
+### Vue de synthèse
 
-### 🗂️ Rôle des tables
-
-| Table                         | Rôle                                           |
-| ----------------------------- | ---------------------------------------------- |
-| `ml_api.employees_dataset`    | Contient le dataset complet des collaborateurs |
-| `ml_api.prediction_requests`  | Stocke les inputs envoyés à l’API et au modèle |
-| `ml_api.prediction_responses` | Stocke les outputs générés par le modèle       |
-| `ml_api.v_prediction_traces`  | Vue SQL de synthèse reliant inputs et outputs  |
-
----
-
-### 🔁 Cheminement complet des données
-
-Le flux d’une prédiction est le suivant :
+La vue SQL dédiée est :
 
 ```text
-1. L'utilisateur appelle POST /predict
-              ↓
-2. L'input JSON est enregistré dans prediction_requests
-              ↓
-3. Le modèle ML génère une prédiction
-              ↓
-4. L'output JSON est enregistré dans prediction_responses
-              ↓
-5. La réponse est retournée par l'API
-              ↓
-6. La vue v_prediction_traces permet de contrôler la trace complète
+ml_api.v_prediction_traces
 ```
 
----
+Elle permet de visualiser rapidement :
 
-### 🧩 Schéma logique de traçabilité
+* le `request_id` ;
+* le `response_id` ;
+* la prédiction ;
+* le libellé métier `stay` ou `leave` ;
+* la probabilité de départ ;
+* le nom du modèle ;
+* la version du modèle.
+
+### Schéma logique de traçabilité
 
 ```mermaid
 flowchart TD
@@ -233,58 +276,40 @@ flowchart TD
     E --> F[Visualisation DBeaver]
 ```
 
----
+### Ouverture rapide avec DBeaver
 
-### 🧾 Scripts SQL associés
-
-| Script                                      | Description                                         |
-| ------------------------------------------- | --------------------------------------------------- |
-| `db/sql/01_create_database.sql`             | Crée la base PostgreSQL `p5_ml_api`                 |
-| `db/sql/02_create_tables.sql`               | Crée le schéma `ml_api` et les tables               |
-| `db/sql/03_load_dataset.sql`                | Charge le dataset complet                           |
-| `db/sql/04_check_database.sql`              | Vérifie le contenu de la base                       |
-| `db/sql/05_trace_predictions.sql`           | Affiche les traces complètes avec les payloads JSON |
-| `db/sql/06_create_trace_view.sql`           | Crée la vue `ml_api.v_prediction_traces`            |
-| `db/sql/07_visualize_prediction_traces.sql` | Affiche toutes les prédictions de manière lisible   |
-
----
-
-### ▶️ Ordre d’exécution des scripts PostgreSQL
-
-Pour reconstruire la base depuis zéro :
+Le projet fournit un script d’ouverture rapide :
 
 ```bash
-psql postgres -f db/sql/01_create_database.sql
-psql p5_ml_api -f db/sql/02_create_tables.sql
-psql p5_ml_api -f db/sql/03_load_dataset.sql
-psql p5_ml_api -f db/sql/06_create_trace_view.sql
+./scripts/open_database_visualization.sh
 ```
 
-Pour vérifier le contenu de la base :
+Ce script ouvre DBeaver avec la requête de visualisation :
 
-```bash
-psql p5_ml_api -f db/sql/04_check_database.sql
+```text
+db/sql/07_visualize_prediction_traces.sql
 ```
 
-Pour vérifier la traçabilité complète, avec les payloads JSON :
+La requête utilisée est :
 
-```bash
-psql p5_ml_api -f db/sql/05_trace_predictions.sql
+```sql
+SELECT
+    request_id,
+    response_id,
+    prediction,
+    prediction_label,
+    probability_leave,
+    model_name,
+    model_version
+FROM ml_api.v_prediction_traces
+ORDER BY request_id DESC;
 ```
-
-Pour afficher une synthèse lisible des prédictions :
-
-```bash
-psql p5_ml_api -f db/sql/07_visualize_prediction_traces.sql
-```
-
-Le script `07_visualize_prediction_traces.sql` n’utilise pas de `LIMIT`. Il affiche donc toutes les traces disponibles dans la base.
 
 ---
 
-### 🚀 Générer plus de traces de prédiction
+## 🚀 Générer plus de traces de prédiction
 
-Si la vue `v_prediction_traces` affiche seulement quelques lignes, ce n’est pas une erreur : cela signifie simplement que peu d’appels réels ont été envoyés à l’API.
+Si la vue `v_prediction_traces` affiche seulement quelques lignes, ce n’est pas une erreur. Cela signifie simplement que peu d’appels réels ont été envoyés à l’API.
 
 Chaque appel à `POST /predict` génère :
 
@@ -328,9 +353,7 @@ ou ouvrir DBeaver pour voir les nouvelles lignes dans :
 ml_api.v_prediction_traces
 ```
 
----
-
-### 🧼 Pourquoi un nettoyage est nécessaire avant l’appel API ?
+### Nettoyage des données avant appel API
 
 Le dataset contient certaines valeurs brutes, par exemple :
 
@@ -346,7 +369,7 @@ Alors que l’API attend une valeur numérique :
 
 Le script `scripts/generate_demo_predictions.py` nettoie donc les valeurs avant de les envoyer à `/predict`.
 
-Sans ce nettoyage, FastAPI peut retourner une erreur :
+Sans ce nettoyage, FastAPI peut retourner :
 
 ```text
 422 Unprocessable Entity
@@ -356,84 +379,154 @@ Cette erreur signifie que le JSON envoyé ne respecte pas exactement le schéma 
 
 ---
 
-### 🖱️ Ouverture rapide avec DBeaver
+## ✅ Tests unitaires et fonctionnels
 
-Le projet fournit un script d’ouverture rapide :
+Le projet contient une suite de tests permettant de vérifier la robustesse de l’API, du modèle, des schémas Pydantic et de la traçabilité.
+
+### Organisation des tests
+
+| Fichier                                | Rôle                                                                      |
+| -------------------------------------- | ------------------------------------------------------------------------- |
+| `tests/conftest.py`                    | Fixtures communes : client FastAPI, payload valide, mock PostgreSQL       |
+| `tests/test_health.py`                 | Tests de l’endpoint `/health`                                             |
+| `tests/test_prediction.py`             | Tests API de `/model-info` et `/predict`                                  |
+| `tests/test_schemas.py`                | Tests unitaires des schémas Pydantic                                      |
+| `tests/test_model_service.py`          | Tests du service de chargement et d’appel du modèle                       |
+| `tests/test_prediction_log_service.py` | Tests de la logique de traçabilité PostgreSQL avec faux moteur SQLAlchemy |
+| `tests/test_functional_api.py`         | Tests fonctionnels du parcours complet API                                |
+
+### Lancer les tests
 
 ```bash
-./scripts/open_database_visualization.sh
+python -m pytest
 ```
 
-Ce script ouvre DBeaver avec la requête de visualisation :
-
-```text
-db/sql/07_visualize_prediction_traces.sql
-```
-
-La requête utilisée est :
-
-```sql
-SELECT
-    request_id,
-    response_id,
-    prediction,
-    prediction_label,
-    probability_leave,
-    model_name,
-    model_version
-FROM ml_api.v_prediction_traces
-ORDER BY request_id DESC;
-```
-
-Exemple de résultat attendu :
-
-```text
-request_id | response_id | prediction | prediction_label | probability_leave | model_name              | model_version
-3          | 3           | 1          | leave            | 0.89550           | attrition-random-forest | 0.5.0
-2          | 2           | 0          | stay             | 0.40030           | attrition-random-forest | 0.5.0
-1          | 1           | 1          | leave            | 0.74450           | attrition-baseline-api  | 0.3.0
-```
-
-Après génération de nouvelles prédictions, cette table affiche davantage de lignes.
-
----
-
-### ✅ Intérêt pour le projet
-
-Cette visualisation permet de démontrer clairement que toutes les interactions avec le modèle passent par la base de données.
-
-Elle répond directement à l’objectif de traçabilité :
-
-```text
-input API stocké → prédiction générée → output stocké → trace consultable
-```
-
-DBeaver sert donc de support visuel pour auditer les prédictions et montrer la cohérence entre l’API, PostgreSQL et le modèle de machine learning.
-
-
-## ✅ Tests
-
-Les tests sont exécutés avec :
+### Lancer les tests avec couverture
 
 ```bash
 python -m pytest --cov=app --cov-report=term-missing
 ```
 
-Résultat validé :
+### Générer le rapport de couverture HTML et XML
+
+```bash
+python -m pytest \
+  --cov=app \
+  --cov-report=term-missing \
+  --cov-report=xml:reports/coverage.xml \
+  --cov-report=html:reports/coverage_html
+```
+
+### Ouvrir le rapport HTML
+
+```bash
+open reports/coverage_html/index.html
+```
+
+Le rapport HTML permet de visualiser précisément :
+
+* les fichiers couverts par les tests ;
+* les lignes exécutées ;
+* les lignes non couvertes ;
+* le taux global de couverture.
+
+### Résultat attendu
+
+Selon l’état actuel de la suite de tests :
 
 ```text
-6 passed
-coverage 90%
+24 passed
+coverage >= 90%
 ```
+
+Le nombre exact peut évoluer si de nouveaux tests sont ajoutés.
+
+---
+
+## 🔁 CI/CD GitHub Actions
+
+Le projet utilise GitHub Actions pour automatiser :
+
+* l’installation des dépendances ;
+* l’exécution des tests ;
+* la génération des rapports de couverture ;
+* le déploiement vers Hugging Face Spaces après validation sur `main`.
+
+Le workflow principal est :
+
+```text
+.github/workflows/ci-cd.yml
+```
+
+### Branches surveillées
+
+Le pipeline se déclenche sur :
+
+```text
+main
+develop
+feature/**
+```
+
+### Étapes principales du pipeline
+
+```text
+Checkout repository
+        ↓
+Setup Python 3.11
+        ↓
+Install dependencies
+        ↓
+Run tests with coverage
+        ↓
+Upload coverage report
+        ↓
+Deploy to Hugging Face Spaces
+```
+
+Le déploiement vers Hugging Face Spaces est exécuté uniquement lorsque les tests passent sur la branche `main`.
+
+---
+
+## 📚 Documentation projet
+
+| Fichier                    | Description                                   |
+| -------------------------- | --------------------------------------------- |
+| `docs/database.md`         | Documentation détaillée de la base PostgreSQL |
+| `docs/database_schema.mmd` | Schéma Mermaid de la base                     |
+| `docs/model_loading.md`    | Documentation sur le chargement du modèle     |
+| `README.md`                | Documentation principale du projet            |
 
 ---
 
 ## 🚀 Versions du projet
 
-| Version             | Contenu                         |
-| ------------------- | ------------------------------- |
-| `v0.1.0` / `v0.1.1` | Structure initiale du projet    |
-| `v0.2.0`            | Pipeline CI/CD                  |
-| `v0.3.0`            | API FastAPI                     |
-| `v0.4.0` / `v0.4.1` | PostgreSQL et traçabilité       |
-| `v0.5.0`            | Chargement du modèle ML exporté |
+| Version             | Contenu                                                       |
+| ------------------- | ------------------------------------------------------------- |
+| `v0.1.0` / `v0.1.1` | Structure initiale du projet                                  |
+| `v0.2.0`            | Pipeline CI/CD                                                |
+| `v0.3.0`            | API FastAPI                                                   |
+| `v0.4.0` / `v0.4.1` | PostgreSQL et traçabilité                                     |
+| `v0.5.0`            | Chargement du modèle ML exporté                               |
+| `v0.5.6`            | Visualisation PostgreSQL avec DBeaver                         |
+| `v0.6.0`            | Tests unitaires, tests fonctionnels et rapports de couverture |
+
+---
+
+## ✅ Résumé
+
+Ce projet démontre une chaîne complète de déploiement machine learning :
+
+```text
+Dataset P4 → Modèle Random Forest → API FastAPI → PostgreSQL → Tests → CI/CD → Hugging Face Spaces
+```
+
+Il couvre les principaux attendus du projet :
+
+* exposition d’un modèle ML via une API ;
+* chargement d’un modèle exporté ;
+* traçabilité complète des prédictions ;
+* visualisation PostgreSQL avec DBeaver ;
+* tests unitaires et fonctionnels ;
+* rapport de couverture ;
+* pipeline CI/CD automatisé.
