@@ -43,3 +43,10 @@ htmlcov/
 # Keep exported ML model artifacts
 !models/*.joblib
 !models/*.json
+
+# Coverage reports
+htmlcov/
+.coverage
+coverage.xml
+reports/coverage_html/
+reports/coverage.xml
