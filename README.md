@@ -1,5 +1,4 @@
 ---
-
 title: P5 ML API Futurisys
 emoji: 🚀
 colorFrom: blue
@@ -7,7 +6,7 @@ colorTo: indigo
 sdk: docker
 app_port: 7860
 pinned: false
--------------
+---
 
 # 🚀 P5 — Déployez un modèle de Machine Learning
 
