@@ -1,14 +1,18 @@
-from fastapi.testclient import TestClient
+def test_health_check_returns_ok(client):
+    """
+    Vérifie que l'endpoint de monitoring /health répond correctement.
 
-from app.main import app
-
-client = TestClient(app)
-
-
-def test_health_check_returns_ok():
+    Ce test permet de contrôler que :
+    - l'API est disponible ;
+    - le service retourne le bon nom ;
+    - la version exposée correspond à la version actuelle du projet.
+    """
     response = client.get("/health")
 
     assert response.status_code == 200
-    assert response.json()["status"] == "ok"
-    assert response.json()["service"] == "p5-ml-api"
-    assert response.json()["version"] == "0.5.0"
+
+    data = response.json()
+
+    assert data["status"] == "ok"
+    assert data["service"] == "p5-ml-api"
+    assert data["version"] == "0.5.0"
