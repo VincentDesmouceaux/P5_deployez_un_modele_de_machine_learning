@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   test:
-    name: Run tests
+    name: Run tests and coverage
     runs-on: ubuntu-latest
 
     env:
@@ -42,13 +42,21 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
 
-      - name: Run unit tests
+      - name: Run tests with coverage
         run: |
-          python -m pytest
+          python -m pytest \
+            --cov=app \
+            --cov-report=term-missing \
+            --cov-report=xml:reports/coverage.xml \
+            --cov-report=html:reports/coverage_html
 
-      - name: Run coverage report
-        run: |
-          python -m pytest --cov=app --cov-report=term-missing
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: |
+            reports/coverage.xml
+            reports/coverage_html
 
   deploy:
     name: Deploy to Hugging Face Spaces
