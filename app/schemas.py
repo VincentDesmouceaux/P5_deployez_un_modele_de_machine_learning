@@ -5,6 +5,7 @@ class PredictionInput(BaseModel):
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
+                "employee_id": 1,
                 "age": 41,
                 "genre": "F",
                 "revenu_mensuel": 5993,
@@ -34,9 +35,18 @@ class PredictionInput(BaseModel):
                 "ayant_enfants": "Y",
                 "frequence_deplacement": "Occasionnel",
                 "annees_depuis_la_derniere_promotion": 0,
-                "annes_sous_responsable_actuel": 5
+                "annes_sous_responsable_actuel": 5,
             }
         }
+    )
+
+    employee_id: int | None = Field(
+        default=None,
+        ge=1,
+        description=(
+            "Identifiant employé utilisé uniquement pour la traçabilité. "
+            "Il ne doit pas être envoyé au modèle de machine learning."
+        ),
     )
 
     age: int = Field(..., ge=18, le=70)
@@ -79,7 +89,7 @@ class PredictionOutput(BaseModel):
                 "prediction_label": "leave",
                 "probability_leave": 0.7825,
                 "model_name": "attrition-random-forest",
-                "model_version": "0.5.0"
+                "model_version": "0.5.0",
             }
         }
     )

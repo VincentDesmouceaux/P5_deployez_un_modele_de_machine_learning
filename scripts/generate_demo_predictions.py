@@ -2,14 +2,14 @@ import json
 import os
 import urllib.error
 import urllib.request
-from pathlib import Path
 
 import pandas as pd
 
-API_URL = "http://127.0.0.1:8000/predict"
+API_URL = os.getenv("API_URL", "http://127.0.0.1:8000/predict")
 DEFAULT_LIMIT = int(os.getenv("DEMO_LIMIT", "20"))
+DATASET_PATH = os.getenv("DATASET_PATH", "data/employee_attrition.csv")
 
-df = pd.read_csv("data/employee_attrition.csv")
+df = pd.read_csv(DATASET_PATH)
 
 
 def clean_percent(value):
@@ -30,45 +30,91 @@ def clean_str(value, default="Inconnu"):
     return str(value).strip()
 
 
-def build_payload(row):
+def get_employee_id(row, index):
+    if "id_employee" in row and not pd.isna(row["id_employee"]):
+        return clean_int(row["id_employee"], index + 1)
+
+    if "employee_id" in row and not pd.isna(row["employee_id"]):
+        return clean_int(row["employee_id"], index + 1)
+
+    return index + 1
+
+
+def build_payload(row, index):
     return {
+        "employee_id": get_employee_id(row, index),
         "age": clean_int(row["age"], 35),
         "genre": clean_str(row["genre"]),
         "revenu_mensuel": clean_int(row["revenu_mensuel"], 0),
         "statut_marital": clean_str(row["statut_marital"]),
         "departement": clean_str(row["departement"]),
         "poste": clean_str(row["poste"]),
-        "nombre_experiences_precedentes": clean_int(row["nombre_experiences_precedentes"], 0),
-        "nombre_heures_travailless": clean_int(row["nombre_heures_travailless"], 0),
+        "nombre_experiences_precedentes": clean_int(
+            row["nombre_experiences_precedentes"],
+            0,
+        ),
+        "nombre_heures_travailless": clean_int(
+            row["nombre_heures_travailless"],
+            0,
+        ),
         "annee_experience_totale": clean_int(row["annee_experience_totale"], 0),
         "annees_dans_l_entreprise": clean_int(row["annees_dans_l_entreprise"], 0),
-        "annees_dans_le_poste_actuel": clean_int(row["annees_dans_le_poste_actuel"], 0),
-        "satisfaction_employee_environnement": clean_int(row["satisfaction_employee_environnement"], 2),
-        "note_evaluation_precedente": clean_int(row["note_evaluation_precedente"], 3),
+        "annees_dans_le_poste_actuel": clean_int(
+            row["annees_dans_le_poste_actuel"],
+            0,
+        ),
+        "satisfaction_employee_environnement": clean_int(
+            row["satisfaction_employee_environnement"],
+            2,
+        ),
+        "note_evaluation_precedente": clean_int(
+            row["note_evaluation_precedente"],
+            3,
+        ),
         "niveau_hierarchique_poste": clean_int(row["niveau_hierarchique_poste"], 1),
-        "satisfaction_employee_nature_travail": clean_int(row["satisfaction_employee_nature_travail"], 2),
-        "satisfaction_employee_equipe": clean_int(row["satisfaction_employee_equipe"], 2),
-        "satisfaction_employee_equilibre_pro_perso": clean_int(row["satisfaction_employee_equilibre_pro_perso"], 2),
+        "satisfaction_employee_nature_travail": clean_int(
+            row["satisfaction_employee_nature_travail"],
+            2,
+        ),
+        "satisfaction_employee_equipe": clean_int(
+            row["satisfaction_employee_equipe"],
+            2,
+        ),
+        "satisfaction_employee_equilibre_pro_perso": clean_int(
+            row["satisfaction_employee_equilibre_pro_perso"],
+            2,
+        ),
         "note_evaluation_actuelle": clean_int(row["note_evaluation_actuelle"], 3),
         "heure_supplementaires": clean_str(row["heure_supplementaires"]),
-        "augementation_salaire_precedente": clean_percent(row["augementation_salaire_precedente"]),
+        "augementation_salaire_precedente": clean_percent(
+            row["augementation_salaire_precedente"]
+        ),
         "nombre_participation_pee": clean_int(row["nombre_participation_pee"], 0),
         "nb_formations_suivies": clean_int(row["nb_formations_suivies"], 0),
-        "nombre_employee_sous_responsabilite": clean_int(row["nombre_employee_sous_responsabilite"], 0),
+        "nombre_employee_sous_responsabilite": clean_int(
+            row["nombre_employee_sous_responsabilite"],
+            0,
+        ),
         "distance_domicile_travail": clean_int(row["distance_domicile_travail"], 0),
         "niveau_education": clean_int(row["niveau_education"], 2),
         "domaine_etude": clean_str(row["domaine_etude"]),
         "ayant_enfants": clean_str(row["ayant_enfants"]),
         "frequence_deplacement": clean_str(row["frequence_deplacement"]),
-        "annees_depuis_la_derniere_promotion": clean_int(row["annees_depuis_la_derniere_promotion"], 0),
-        "annes_sous_responsable_actuel": clean_int(row["annes_sous_responsable_actuel"], 0),
+        "annees_depuis_la_derniere_promotion": clean_int(
+            row["annees_depuis_la_derniere_promotion"],
+            0,
+        ),
+        "annes_sous_responsable_actuel": clean_int(
+            row["annes_sous_responsable_actuel"],
+            0,
+        ),
     }
 
 
 success_count = 0
 
 for index, row in df.head(DEFAULT_LIMIT).iterrows():
-    payload = build_payload(row)
+    payload = build_payload(row, index)
 
     request = urllib.request.Request(
         API_URL,
@@ -83,7 +129,7 @@ for index, row in df.head(DEFAULT_LIMIT).iterrows():
         success_count += 1
 
         print(
-            f"Ligne {index} -> "
+            f"Ligne {index} | employee_id={payload['employee_id']} -> "
             f"prediction={result['prediction']} | "
             f"label={result['prediction_label']} | "
             f"proba={result['probability_leave']}"
