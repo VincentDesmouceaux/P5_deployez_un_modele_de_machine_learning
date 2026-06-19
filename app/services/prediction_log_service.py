@@ -22,9 +22,7 @@ def save_prediction_request(input_data: PredictionInput) -> int:
     with engine.begin() as connection:
         request_id = connection.execute(
             query,
-            {
-                "input_payload": input_data.model_dump_json()
-            },
+            {"input_payload": input_data.model_dump_json()},
         ).scalar_one()
 
     return request_id

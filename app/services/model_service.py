@@ -30,7 +30,9 @@ def get_model_info() -> ModelInfo:
         model_version=metadata["model_version"],
         model_type=metadata["model_type"],
         target=metadata["target"],
-        description=metadata.get("description", "Modèle Random Forest de prédiction d attrition."),
+        description=metadata.get(
+            "description", "Modèle Random Forest de prédiction d attrition."
+        ),
         input_features=metadata["features"],
     )
 

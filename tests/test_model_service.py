@@ -61,7 +61,9 @@ def test_predict_attrition_label_matches_prediction(valid_prediction_payload):
         assert result.prediction_label == "leave"
 
 
-def test_predict_attrition_label_matches_probability_threshold(valid_prediction_payload):
+def test_predict_attrition_label_matches_probability_threshold(
+    valid_prediction_payload,
+):
     """
     Vérifie la règle métier du seuil de décision.
 

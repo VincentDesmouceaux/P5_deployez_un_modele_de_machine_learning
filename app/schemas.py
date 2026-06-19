@@ -34,7 +34,7 @@ class PredictionInput(BaseModel):
                 "ayant_enfants": "Y",
                 "frequence_deplacement": "Occasionnel",
                 "annees_depuis_la_derniere_promotion": 0,
-                "annes_sous_responsable_actuel": 5
+                "annes_sous_responsable_actuel": 5,
             }
         }
     )
@@ -79,7 +79,7 @@ class PredictionOutput(BaseModel):
                 "prediction_label": "leave",
                 "probability_leave": 0.7825,
                 "model_name": "attrition-random-forest",
-                "model_version": "0.5.0"
+                "model_version": "0.5.0",
             }
         }
     )

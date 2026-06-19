@@ -3,11 +3,17 @@ from fastapi.responses import RedirectResponse
 
 from app.schemas import ModelInfo, PredictionInput, PredictionOutput
 from app.services.model_service import get_model_info, predict_attrition
-from app.services.prediction_log_service import save_prediction_request, save_prediction_response
+from app.services.prediction_log_service import (
+    save_prediction_request,
+    save_prediction_response,
+)
 
 app = FastAPI(
     title="P5 - API de déploiement ML",
-    description="API FastAPI pour exposer un modèle de machine learning de prédiction d'attrition.",
+    description=(
+        "API FastAPI pour exposer un modèle de machine learning "
+        "de prédiction d'attrition"
+    ),
     version="0.5.0",
 )
 

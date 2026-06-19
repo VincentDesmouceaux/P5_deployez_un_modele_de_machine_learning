@@ -43,7 +43,9 @@ def test_prediction_input_rejects_age_above_maximum(valid_prediction_payload):
         PredictionInput(**payload)
 
 
-def test_prediction_input_rejects_invalid_probability_related_score(valid_prediction_payload):
+def test_prediction_input_rejects_invalid_probability_related_score(
+    valid_prediction_payload,
+):
     """
     Vérifie que les scores métier bornés sont bien contrôlés.
 
