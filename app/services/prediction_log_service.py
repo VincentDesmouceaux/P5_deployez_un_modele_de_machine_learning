@@ -7,13 +7,16 @@ from app.schemas import PredictionInput, PredictionOutput
 def save_prediction_request(input_data: PredictionInput) -> int:
     engine = get_engine()
 
+    input_payload = input_data.model_dump()
+    employee_id = input_payload.get("employee_id")
+
     query = text("""
         INSERT INTO ml_api.prediction_requests (
             employee_id,
             input_payload
         )
         VALUES (
-            NULL,
+            :employee_id,
             CAST(:input_payload AS JSONB)
         )
         RETURNING request_id;
@@ -23,7 +26,8 @@ def save_prediction_request(input_data: PredictionInput) -> int:
         request_id = connection.execute(
             query,
             {
-                "input_payload": input_data.model_dump_json()
+                "employee_id": employee_id,
+                "input_payload": input_data.model_dump_json(),
             },
         ).scalar_one()
 

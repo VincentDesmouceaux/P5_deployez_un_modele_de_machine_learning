@@ -1,6 +1,7 @@
 import json
 from functools import lru_cache
 from pathlib import Path
+from typing import Any
 
 import joblib
 import pandas as pd
@@ -30,19 +31,34 @@ def get_model_info() -> ModelInfo:
         model_version=metadata["model_version"],
         model_type=metadata["model_type"],
         target=metadata["target"],
-        description=metadata.get("description", "Modèle Random Forest de prédiction d attrition."),
+        description=metadata.get(
+            "description",
+            "Modèle Random Forest de prédiction d'attrition.",
+        ),
         input_features=metadata["features"],
     )
 
 
-def predict_attrition(input_data: PredictionInput) -> PredictionOutput:
+def _to_payload(input_data: PredictionInput | dict[str, Any]) -> dict[str, Any]:
+    if isinstance(input_data, PredictionInput):
+        return input_data.model_dump()
+
+    return dict(input_data)
+
+
+def predict_attrition(input_data: PredictionInput | dict[str, Any]) -> PredictionOutput:
     model = load_model()
     metadata = load_metadata()
 
-    input_payload = input_data.model_dump()
+    input_payload = _to_payload(input_data)
     features = metadata["features"]
 
-    input_dataframe = pd.DataFrame([input_payload], columns=features)
+    model_payload = {feature: input_payload[feature] for feature in features}
+
+    input_dataframe = pd.DataFrame(
+        [model_payload],
+        columns=features,
+    )
 
     probability_leave = float(model.predict_proba(input_dataframe)[0][1])
     prediction = int(probability_leave >= 0.5)

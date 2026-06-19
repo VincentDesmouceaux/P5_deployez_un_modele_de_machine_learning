@@ -56,4 +56,6 @@ def mock_prediction_database_logging(monkeypatch):
     La traçabilité réelle est testée localement avec PostgreSQL et DBeaver.
     """
     monkeypatch.setattr("app.main.save_prediction_request", lambda input_data: 1)
-    monkeypatch.setattr("app.main.save_prediction_response", lambda request_id, output_data: 1)
+    monkeypatch.setattr(
+        "app.main.save_prediction_response", lambda request_id, output_data: 1
+    )
