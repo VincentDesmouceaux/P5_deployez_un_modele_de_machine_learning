@@ -12,7 +12,7 @@ app = FastAPI(
     title="P5 - API de déploiement ML",
     description=(
         "API FastAPI pour exposer un modèle de machine learning "
-        "de prédiction d'attrition"
+        "de prédiction d'attrition."
     ),
     version="0.5.0",
 )
